@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- PWA設定 -->
+    <meta name="application-name" content="OKN Strip">
+    <meta name="apple-mobile-web-app-title" content="OKN Strip">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- アイコン -->
+    <link rel="icon" href="FNT512.png">
+    <link rel="apple-touch-icon" href="FNT512.png">
+    
+    <!-- テーマカラー -->
+    <meta name="theme-color" content="#1a1a2e">
+    
+    <title>OKN Strip - 視運動性眼振トレーニング</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            touch-action: none;
+            background: #fff;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        /* スプラッシュスクリーン */
+        .splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .splash-screen.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .splash-logo {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+            border-radius: 20px;
+        }
+
+        .splash-brand {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .splash-title {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .splash-copyright {
+            font-size: 0.75rem;
+            color: #999;
+        }
+
+        /* ストライプコンテナ */
+        .stripe-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .stripe-wrapper {
+            display: flex;
+            height: 100%;
+            will-change: transform;
+        }
+
+        .stripe {
+            flex-shrink: 0;
+            height: 100%;
+        }
+
+        /* 視点マーカー */
+        .fixation-point {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .fixation-point.hidden {
+            display: none;
+        }
+
+        .fixation-point::before,
+        .fixation-point::after {
+            content: '';
+            position: absolute;
+            background: #00ff00;
+            box-shadow: 0 0 5px #00ff00;
+        }
+
+        .fixation-point::before {
+            width: 30px;
+            height: 4px;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+        }
+
+        .fixation-point::after {
+            width: 4px;
+            height: 30px;
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+        }
+
+        /* ヘッダー */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(26, 26, 46, 0.9);
+            padding: 10px 15px;
+            padding-top: max(10px, env(safe-area-inset-top));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .header.hidden {
+            transform: translateY(-100%);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+        }
+
+        .header-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .menu-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            cursor: pointer;
+            color: #fff;
+            font-size: 1.4rem;
+        }
+
+        /* コントロールボタン */
+        .play-btn {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            font-size: 2.5rem;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-btn.playing {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.5);
+        }
+
+        /* 説明パネル */
+        .info-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 46, 0.9);
+            padding: 12px 20px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .info-panel.hidden {
+            transform: translateY(100%);
+        }
+
+        .info-text {
+            font-size: 0.8rem;
+            color: #ccc;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        .info-text strong {
+            color: #fff;
+        }
+
+        /* フッター */
+        .footer {
+            position: fixed;
+            bottom: 5px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.65rem;
+            color: rgba(0,0,0,0.3);
+            z-index: 99;
+            pointer-events: none;
+        }
+
+        /* メニューオーバーレイ */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .menu-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* メニューパネル */
+        .menu-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 300px;
+            max-width: 85vw;
+            height: 100%;
+            background: #1a1a2e;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .menu-panel.show {
+            transform: translateX(0);
+        }
+
+        .menu-header {
+            padding: 15px 20px;
+            padding-top: max(15px, env(safe-area-inset-top));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #16162a;
+        }
+
+        .menu-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .menu-close {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+        .menu-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .menu-section {
+            margin-bottom: 20px;
+        }
+
+        .menu-section-title {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .menu-option {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .opt-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .opt-btn.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .color-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .color-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .color-btn.active {
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+
+        .color-btn.black-color {
+            background: linear-gradient(135deg, #000 50%, #fff 50%);
+        }
+
+        .color-btn.red-color {
+            background: linear-gradient(135deg, #e74c3c 50%, #fff 50%);
+        }
+
+        .color-btn.icon-color {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.5rem;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .slider-val {
+            min-width: 45px;
+            text-align: right;
+            font-size: 0.9rem;
+            color: #fff;
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-label {
+            font-size: 0.9rem;
+            color: #ddd;
+        }
+
+        .toggle {
+            width: 50px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .toggle.active {
+            background: #667eea;
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: #fff;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle.active::after {
+            transform: translateX(22px);
+        }
+
+        /* フルスクリーンモード */
+        .fullscreen-mode .header {
+            transform: translateY(-100%);
+        }
+
+        .fullscreen-mode .info-panel {
+            transform: translateY(100%);
+        }
+
+        .fullscreen-mode .play-btn {
+            bottom: 40px;
+        }
+
+        .fullscreen-mode .footer {
+            display: none;
+        }
+
+        /* UI表示ボタン（フルスクリーン時のみ表示） */
+        .show-ui-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(102, 126, 234, 0.8);
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .show-ui-btn:active {
+            transform: scale(0.95);
+        }
+
+        .fullscreen-mode .show-ui-btn {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <!-- スプラッシュスクリーン -->
+    <div class="splash-screen" id="splash">
+        <img src="FNT512.png" alt="FNT" class="splash-logo" onerror="this.style.display='none'">
+        <div class="splash-brand">Functional Neuro Training</div>
+        <div class="splash-title">OKN Strip</div>
+        <div class="splash-copyright">© Functional Neuro Training</div>
+    </div>
+
+    <!-- ストライプ表示エリア -->
+    <div class="stripe-container" id="stripeContainer">
+        <div class="stripe-wrapper" id="stripeWrapper"></div>
+    </div>
+
+    <!-- 視点マーカー -->
+    <div class="fixation-point" id="fixation"></div>
+
+    <!-- ヘッダー -->
+    <header class="header" id="header">
+        <div class="header-left">
+            <img src="FNT512-transparent.png" alt="FNT" class="header-logo" onerror="this.style.display='none'">
+            <span class="header-title">OKN Strip</span>
+        </div>
+        <button class="menu-btn" id="menuBtn">☰</button>
+    </header>
+
+    <!-- 再生ボタン -->
+    <button class="play-btn" id="playBtn">▶</button>
+
+    <!-- 説明パネル -->
+    <div class="info-panel" id="infoPanel">
+        <p class="info-text">
+            <strong>視運動性眼振（OKN）トレーニング:</strong><br>
+            動くストライプを見つめることで、前庭系・小脳・脳幹の視覚-運動統合機能を刺激します。
+        </p>
+    </div>
+
+    <!-- フッター -->
+    <div class="footer">© Functional Neuro Training</div>
+
+    <!-- UI表示ボタン（フルスクリーン時） -->
+    <button class="show-ui-btn" id="showUiBtn">☰</button>
+
+    <!-- メニューオーバーレイ -->
+    <div class="menu-overlay" id="overlay"></div>
+
+    <!-- メニューパネル -->
+    <div class="menu-panel" id="menu">
+        <div class="menu-header">
+            <span class="menu-title">設定</span>
+            <button class="menu-close" id="closeBtn">✕</button>
+        </div>
+        <div class="menu-content">
+            <!-- 方向 -->
+            <div class="menu-section">
+                <div class="menu-section-title">方向</div>
+                <div class="menu-option">
+                    <div class="btn-group">
+                        <button class="opt-btn active" id="dirLeft">← 左</button>
+                        <button class="opt-btn" id="dirRight">右 →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 色 -->
+            <div class="menu-section">
+                <div class="menu-section-title">ストライプの色</div>
+                <div class="menu-option">
+                    <div class="color-group">
+                        <button class="color-btn black-color active" id="colorBlack" title="黒"></button>
+                        <button class="color-btn red-color" id="colorRed" title="赤"></button>
+                        <button class="color-btn icon-color" id="colorIcon" title="アイコン">★</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 速度 -->
+            <div class="menu-section">
+                <div class="menu-section-title">速度</div>
+                <div class="menu-option">
+                    <div class="slider-row">
+                        <input type="range" class="slider" id="speedSlider" min="1" max="10" value="5">
+                        <span class="slider-val" id="speedVal">5</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 幅 -->
+            <div class="menu-section">
+                <div class="menu-section-title">ストライプ幅</div>
+                <div class="menu-option">
+                    <div class="slider-row">
+                        <input type="range" class="slider" id="widthSlider" min="30" max="120" value="60">
+                        <span class="slider-val" id="widthVal">60px</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 視点 -->
+            <div class="menu-section">
+                <div class="menu-section-title">視点マーカー</div>
+                <div class="menu-option">
+                    <div class="toggle-row">
+                        <span class="toggle-label">中央に表示</span>
+                        <div class="toggle active" id="fixationToggle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UI非表示 -->
+            <div class="menu-section">
+                <div class="menu-section-title">表示設定</div>
+                <div class="menu-option">
+                    <div class="toggle-row">
+                        <span class="toggle-label">UIを非表示</span>
+                        <div class="toggle" id="fullscreenToggle"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 設定
+        const config = {
+            direction: 'left',
+            color: 'black',
+            speed: 5,
+            width: 60,
+            showFixation: true,
+            fullscreen: false
+        };
+
+        let isPlaying = false;
+        let animationId = null;
+        let position = 0;
+
+        // DOM取得
+        const $ = id => document.getElementById(id);
+        const splash = $('splash');
+        const stripeWrapper = $('stripeWrapper');
+        const fixation = $('fixation');
+        const header = $('header');
+        const playBtn = $('playBtn');
+        const infoPanel = $('infoPanel');
+        const menuBtn = $('menuBtn');
+        const menu = $('menu');
+        const overlay = $('overlay');
+        const closeBtn = $('closeBtn');
+        const dirLeft = $('dirLeft');
+        const dirRight = $('dirRight');
+        const colorBlack = $('colorBlack');
+        const colorRed = $('colorRed');
+        const colorIcon = $('colorIcon');
+        const speedSlider = $('speedSlider');
+        const speedVal = $('speedVal');
+        const widthSlider = $('widthSlider');
+        const widthVal = $('widthVal');
+        const fixationToggle = $('fixationToggle');
+        const fullscreenToggle = $('fullscreenToggle');
+        const showUiBtn = $('showUiBtn');
+
+        // 初期化
+        function init() {
+            // スプラッシュ非表示
+            setTimeout(() => splash.classList.add('hide'), 2000);
+            
+            // ストライプ生成
+            createStripes();
+            
+            // イベント設定
+            setupEvents();
+        }
+
+        // ストライプ生成
+        function createStripes() {
+            const screenWidth = window.innerWidth;
+            const stripeWidth = config.width;
+            // 画面幅の3倍分のストライプを作成（スムーズなループのため）
+            const stripeCount = Math.ceil(screenWidth / stripeWidth) * 3 + 4;
+            
+            stripeWrapper.innerHTML = '';
+            stripeWrapper.style.width = (stripeCount * stripeWidth) + 'px';
+            
+            const colors = {
+                black: ['#000000', '#ffffff'],
+                red: ['#e74c3c', '#ffffff'],
+                icon: ['#667eea', '#ffffff']
+            };
+            
+            const [dark, light] = colors[config.color];
+            const icons = ['★', '●', '▲', '■', '◆'];
+            
+            for (let i = 0; i < stripeCount; i++) {
+                const stripe = document.createElement('div');
+                stripe.className = 'stripe';
+                stripe.style.width = stripeWidth + 'px';
+                stripe.style.background = i % 2 === 0 ? dark : light;
+                
+                if (config.color === 'icon' && i % 2 === 0) {
+                    stripe.style.display = 'flex';
+                    stripe.style.flexDirection = 'column';
+                    stripe.style.alignItems = 'center';
+                    stripe.style.justifyContent = 'space-around';
+                    stripe.style.fontSize = (stripeWidth * 0.5) + 'px';
+                    stripe.style.color = '#fff';
+                    
+                    const iconCount = Math.ceil(window.innerHeight / stripeWidth);
+                    for (let j = 0; j < iconCount; j++) {
+                        const icon = document.createElement('span');
+                        icon.textContent = icons[(i + j) % icons.length];
+                        stripe.appendChild(icon);
+                    }
+                }
+                
+                stripeWrapper.appendChild(stripe);
+            }
+            
+            // 初期位置を設定
+            position = 0;
+            stripeWrapper.style.transform = `translateX(${position}px)`;
+        }
+
+        // イベント設定
+        function setupEvents() {
+            // 再生/停止
+            playBtn.addEventListener('click', togglePlay);
+            
+            // メニュー開閉
+            menuBtn.addEventListener('click', () => {
+                menu.classList.add('show');
+                overlay.classList.add('show');
+            });
+            
+            closeBtn.addEventListener('click', closeMenu);
+            overlay.addEventListener('click', closeMenu);
+            
+            // 方向
+            dirLeft.addEventListener('click', () => {
+                config.direction = 'left';
+                dirLeft.classList.add('active');
+                dirRight.classList.remove('active');
+            });
+            
+            dirRight.addEventListener('click', () => {
+                config.direction = 'right';
+                dirRight.classList.add('active');
+                dirLeft.classList.remove('active');
+            });
+            
+            // 色
+            colorBlack.addEventListener('click', () => setColor('black'));
+            colorRed.addEventListener('click', () => setColor('red'));
+            colorIcon.addEventListener('click', () => setColor('icon'));
+            
+            // 速度
+            speedSlider.addEventListener('input', e => {
+                config.speed = parseInt(e.target.value);
+                speedVal.textContent = config.speed;
+            });
+            
+            // 幅
+            widthSlider.addEventListener('input', e => {
+                config.width = parseInt(e.target.value);
+                widthVal.textContent = config.width + 'px';
+                createStripes();
+            });
+            
+            // 視点
+            fixationToggle.addEventListener('click', () => {
+                config.showFixation = !config.showFixation;
+                fixationToggle.classList.toggle('active', config.showFixation);
+                fixation.classList.toggle('hidden', !config.showFixation);
+            });
+            
+            // フルスクリーン
+            fullscreenToggle.addEventListener('click', () => {
+                config.fullscreen = !config.fullscreen;
+                fullscreenToggle.classList.toggle('active', config.fullscreen);
+                document.body.classList.toggle('fullscreen-mode', config.fullscreen);
+                closeMenu();
+            });
+
+            // UI表示ボタン（フルスクリーン時）
+            showUiBtn.addEventListener('click', () => {
+                config.fullscreen = false;
+                fullscreenToggle.classList.remove('active');
+                document.body.classList.remove('fullscreen-mode');
+            });
+            
+            // リサイズ
+            window.addEventListener('resize', createStripes);
+        }
+
+        function closeMenu() {
+            menu.classList.remove('show');
+            overlay.classList.remove('show');
+        }
+
+        function setColor(color) {
+            config.color = color;
+            colorBlack.classList.toggle('active', color === 'black');
+            colorRed.classList.toggle('active', color === 'red');
+            colorIcon.classList.toggle('active', color === 'icon');
+            createStripes();
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            
+            if (isPlaying) {
+                playBtn.textContent = '⏸';
+                playBtn.classList.add('playing');
+                animate();
+            } else {
+                playBtn.textContent = '▶';
+                playBtn.classList.remove('playing');
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            }
+        }
+
+        function animate() {
+            if (!isPlaying) return;
+            
+            // 速度 (1-10 → 2-20 pixels per frame)
+            const speed = config.speed * 2;
+            
+            if (config.direction === 'left') {
+                position -= speed;
+            } else {
+                position += speed;
+            }
+            
+            // ループ処理: ストライプ幅の2倍でリセット
+            const stripeWidth = config.width;
+            const resetPoint = stripeWidth * 2;
+            
+            if (position <= -resetPoint) {
+                position += resetPoint;
+            } else if (position >= resetPoint) {
+                position -= resetPoint;
+            }
+            
+            stripeWrapper.style.transform = `translateX(${position}px)`;
+            
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // スクロール防止
+        document.addEventListener('touchmove', e => {
+            if (e.touches.length > 1) e.preventDefault();
+        }, { passive: false });
+        
+        window.addEventListener('scroll', () => window.scrollTo(0, 0));
+
+        // Service Worker登録
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log('SW registered'))
+                .catch(err => console.log('SW error:', err));
+        }
+
+        // 起動
+        init();
+    </script>
+</body>
+</html>
